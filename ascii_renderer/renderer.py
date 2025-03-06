@@ -19,15 +19,20 @@ class Renderer:
 
             # Backface culling
             if is_visible:
+                self.rasterize_face(face)
                 self.draw_face(face, color=BRIGHT_GREEN)
 
             if debug:
                 color = self.get_color_from_direction(face.direction)
                 self.draw_normal(normal.scale(12), color=color)
 
-    def draw_wireframe(self, shape: Shape) -> None:
+    def draw_wireframe(self, shape: Shape, debug=False) -> None:
         for face in shape.faces:
             self.draw_face(face, color=RED)
+
+            if debug:
+                color = self.get_color_from_direction(face.direction)
+                self.draw_normal(face.normal().normalize().scale(12), color=color)
 
     def draw_face(self, face: Face, color: str=None) -> None:
         for edge in face.get_edges():
@@ -64,6 +69,43 @@ class Renderer:
             if double_err < delta_x:
                 err += delta_x
                 curr_y += step_y
+
+    def rasterize_face(self, face: Face) -> None:
+        edges, min_y, max_y = face.get_2d_edges(FOCAL_LENGTH)
+        edges.sort(key=lambda edge: edge[0].y)
+
+        active_edges: list[tuple[Vec2, Vec2]] = []
+        y = min_y
+        while y <= max_y:
+            while edges and edges[0][0].y == y:
+                active_edges.append(edges.pop(0))
+
+            active_edges = [edge for edge in active_edges if edge[1].y != y]
+
+            active_edges.sort(key=lambda edge: edge[0].x + (y - edge[0].y)
+                                                         * (edge[1].x - edge[0].x)
+                                                         / (edge[1].y - edge[0].y))
+
+            for i in range(0, len(active_edges), 2):
+                if i + 1 >= len(active_edges):
+                    break
+
+                active_edge1: tuple[Vec2, Vec2] = active_edges[i]
+                x_start = int(active_edge1[0].x + (y - active_edge1[0].y)
+                                                * (active_edge1[1].x - active_edge1[0].x)
+                                                / (active_edge1[1].y - active_edge1[0].y))
+
+                active_edge2: tuple[Vec2, Vec2] = active_edges[i + 1]
+                x_end = int(active_edge2[0].x + (y - active_edge2[0].y)
+                                              * (active_edge2[1].x - active_edge2[0].x)
+                                              / (active_edge2[1].y - active_edge2[0].y))
+                for x in range(x_start, x_end + 1):
+                    pixel = self._grid.get_pixel(x, y)
+                    if pixel:
+                        pixel.char = '#'
+                        pixel.color = LIGHT_GRAY
+
+            y += 1
 
     def get_char_for_line(self, delta_x: float, delta_y: float, curr_x: float, curr_y: float,
                           end_vec: Vec2) -> str:

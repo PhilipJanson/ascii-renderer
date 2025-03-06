@@ -136,6 +136,27 @@ class Face:
             edges.add(edge)
         return edges
 
+    def get_2d_polygon(self, focal_length: float) -> tuple[list[Vec2], int]:
+        polygon = [vertex.to_vec2(focal_length) for vertex in self.vertices]
+        return polygon, len(polygon)
+
+    def get_2d_edges(self, focal_length: float) -> tuple[list[tuple[Vec2, Vec2]], int, int]:
+        polygon, vertex_count = self.get_2d_polygon(focal_length)
+        min_y = min(vertex.y for vertex in polygon)
+        max_y = max(vertex.y for vertex in polygon)
+        edges = []
+
+        for i in range(vertex_count):
+            vertex1 = polygon[i]
+            vertex2 = polygon[(i + 1) % vertex_count]
+            if vertex1.y == vertex2.y:
+                continue  # Ignore horizontal edges
+            if vertex1.y > vertex2.y:
+                vertex1, vertex2 = vertex2, vertex1
+            edges.append((vertex1, vertex2))
+
+        return edges, min_y, max_y
+
 class Shape:
     def __init__(self, center: Vec3, size: float) -> None:
         self.center = center
