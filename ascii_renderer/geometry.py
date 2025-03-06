@@ -1,4 +1,5 @@
 from __future__ import annotations
+import math
 from typing import Iterator
 
 class Vec2:
@@ -86,6 +87,71 @@ class Vec3:
         y = round(-focal_length * self.y / (-focal_length + self.z))
 
         return Vec2(x, y)
+
+class Face:
+    def __init__(self, *vertices: Vec3) -> None:
+        self.vertex_count = len(vertices)
+        self.vertices: list[Vec3] = list(vertices)
+
+        if self.vertex_count < 3:
+            raise ValueError("A Face takes a minimum of three vertices.")
+
+    def center(self) -> Vec3:
+        return sum(self.vertices, Vec3.ZERO_VEC) / len(self.vertices)
+
+    def normal(self) -> Vec3:
+        edge1 = self.vertices[1] - self.vertices[0]
+        edge2 = self.vertices[2] - self.vertices[0]
+        return edge1.cross_product(edge2).normalize()
+
+    def is_visible(self, camera_position: Vec3) -> tuple[bool, Vec3]:
+        normal = self.normal()
+        line_of_sight = camera_position - self.center()
+        dot_product = normal.dot_product(line_of_sight)
+        return dot_product >= 0, normal
+
+    def get_edges(self) -> set[tuple[Vec3, Vec3]]:
+        edges = set()
+        for i in range(self.vertex_count):
+            edge = (self.vertices[i], self.vertices[(i + 1) % self.vertex_count])
+            edges.add(edge)
+        return edges
+
+class Shape:
+    def __init__(self, center: Vec3, size: float) -> None:
+        self.center = center
+        self.size = size
+        self.vertices: list[Vec3] = []
+        self.edges: set[tuple[Vec3, Vec3]] = set()
+        self.faces: list[Face] = []
+
+    def rotate_x(self, theta: float) -> None:
+        for vertex in self.vertices:
+            new_y = vertex.y * math.cos(-theta) - vertex.z * math.sin(-theta)
+            new_z = vertex.y * math.sin(-theta) + vertex.z * math.cos(-theta)
+
+            vertex.y = new_y
+            vertex.z = new_z
+
+    def rotate_y(self, theta: float) -> None:
+        for vertex in self.vertices:
+            new_x = vertex.x * math.cos(theta) - vertex.z * math.sin(theta)
+            new_z = vertex.x * math.sin(theta) + vertex.z * math.cos(theta)
+
+            vertex.x = new_x
+            vertex.z = new_z
+
+    def rotate_z(self, theta: float) -> None:
+        for vertex in self.vertices:
+            new_x = vertex.x * math.cos(-theta) - vertex.y * math.sin(-theta)
+            new_y = vertex.x * math.sin(-theta) + vertex.y * math.cos(-theta)
+
+            vertex.x = new_x
+            vertex.y = new_y
+
+    def scale(self, factor: float) -> None:
+        for vertex in self.vertices:
+            vertex.scale(factor)
 
 Vec2.ZERO_VEC = Vec2(0, 0)
 Vec3.ZERO_VEC = Vec3(0, 0, 0)
