@@ -88,10 +88,29 @@ class Vec3:
 
         return Vec2(x, y)
 
+class Axis:
+    X = 'X'
+    Y = 'Y'
+    Z = 'Z'
+
+class Direction:
+    NORTH: Direction = None
+    SOUTH: Direction = None
+    EAST: Direction = None
+    WEST: Direction = None
+    UP: Direction = None
+    DOWN: Direction = None
+
+    def __init__(self, name: str, axis: str, vector: Vec3) -> None:
+        self.name: str = name
+        self.axis: str = axis
+        self.vector: Vec3 = vector
+
 class Face:
-    def __init__(self, *vertices: Vec3) -> None:
+    def __init__(self, *vertices: Vec3, direction: Direction=None) -> None:
         self.vertex_count = len(vertices)
         self.vertices: list[Vec3] = list(vertices)
+        self.direction: Direction = direction
 
         if self.vertex_count < 3:
             raise ValueError("A Face takes a minimum of three vertices.")
@@ -153,5 +172,40 @@ class Shape:
         for vertex in self.vertices:
             vertex.scale(factor)
 
+class Cube(Shape):
+    def __init__(self, center: Vec3, size: float) -> None:
+        super().__init__(center, size)
+        half_size = size / 2
+
+        vertices = [
+            Vec3(center.x - half_size, center.y - half_size, center.z + half_size),
+            Vec3(center.x + half_size, center.y - half_size, center.z + half_size),
+            Vec3(center.x + half_size, center.y + half_size, center.z + half_size),
+            Vec3(center.x - half_size, center.y + half_size, center.z + half_size),
+            Vec3(center.x - half_size, center.y - half_size, center.z - half_size),
+            Vec3(center.x + half_size, center.y - half_size, center.z - half_size),
+            Vec3(center.x + half_size, center.y + half_size, center.z - half_size),
+            Vec3(center.x - half_size, center.y + half_size, center.z - half_size)
+        ]
+
+        faces = [
+            Face(vertices[0], vertices[1], vertices[2], vertices[3], direction=Direction.SOUTH),
+            Face(vertices[7], vertices[6], vertices[5], vertices[4], direction=Direction.NORTH),
+            Face(vertices[4], vertices[5], vertices[1], vertices[0], direction=Direction.UP),
+            Face(vertices[6], vertices[7], vertices[3], vertices[2], direction=Direction.DOWN),
+            Face(vertices[0], vertices[3], vertices[7], vertices[4], direction=Direction.EAST),
+            Face(vertices[5], vertices[6], vertices[2], vertices[1], direction=Direction.WEST)
+        ]
+
+        self.vertices = vertices
+        self.faces = faces
+
 Vec2.ZERO_VEC = Vec2(0, 0)
 Vec3.ZERO_VEC = Vec3(0, 0, 0)
+
+Direction.NORTH = Direction('North', Axis.Z, Vec3(0, 0, -1))
+Direction.SOUTH = Direction('South', Axis.Z, Vec3(0, 0, 1))
+Direction.EAST = Direction('East', Axis.X, Vec3(1, 0, 0))
+Direction.WEST = Direction('West', Axis.X, Vec3(-1, 0, 0))
+Direction.UP = Direction('Up', Axis.Y, Vec3(0, -1, 0))
+Direction.DOWN = Direction('Down', Axis.Y, Vec3(0, 1, 0))
