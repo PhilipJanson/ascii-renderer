@@ -24,5 +24,6 @@ class App(threading.Thread):
             self.shape.rotate_y(0.02)
             self.shape.rotate_z(0.02)
             self.renderer.draw_shape(self.shape, debug=True)
+
             self.renderer.draw()
             time.sleep(0.02)

@@ -1,7 +1,7 @@
 import sys
 
-from .color import BRIGHT_GREEN, RED
-from .geometry import Face, Shape, Vec2, Vec3
+from .color import *
+from .geometry import Direction, Face, Shape, Vec2, Vec3
 from .grid import Grid
 
 SPACER_CHAR = ' '
@@ -15,14 +15,15 @@ class Renderer:
 
     def draw_shape(self, shape: Shape, debug: bool=False) -> None:
         for face in shape.faces:
-            # Backface culling
             is_visible, normal = face.is_visible(CAMERA_POSITION)
 
+            # Backface culling
             if is_visible:
                 self.draw_face(face, color=BRIGHT_GREEN)
 
-                if debug:
-                    self.draw_normal(normal.scale(10), color=RED)
+            if debug:
+                color = self.get_color_from_direction(face.direction)
+                self.draw_normal(normal.scale(12), color=color)
 
     def draw_wireframe(self, shape: Shape) -> None:
         for face in shape.faces:
@@ -32,69 +33,63 @@ class Renderer:
         for edge in face.get_edges():
             startVec = edge[0].to_vec2(FOCAL_LENGTH)
             endVec = edge[1].to_vec2(FOCAL_LENGTH)
-            self.draw_vector(startVec, endVec, color=color)
+            self.draw_line(startVec, endVec, color=color)
 
     def draw_normal(self, normal: Vec3, color: str=None) -> None:
-        self.draw_vector(Vec2.ZERO_VEC, normal.to_vec2(100), color=color)
+        self.draw_line(Vec2.ZERO_VEC, normal.to_vec2(100), color=color)
 
-    def draw_vector(self, a: Vec2, b: Vec2, color: str=None) -> None:
-        self.draw_line(a.x, a.y, b.x, b.y, color=color)
-
-    def draw_line(self,
-                  start_x: int,
-                  start_y: int,
-                  end_x: int,
-                  end_y: int,
-                  color: str=None) -> None:
-        delta_x = abs(end_x - start_x)
-        delta_y = abs(end_y - start_y)
-        sx = 1 if start_x < end_x else -1
-        sy = 1 if start_y < end_y else -1
+    def draw_line(self, start_vec: Vec2, end_vec: Vec2, color: str=None) -> None:
+        delta_x = abs(end_vec.x - start_vec.x)
+        delta_y = abs(end_vec.y - start_vec.y)
+        step_x = 1 if start_vec.x < end_vec.x else -1
+        step_y = 1 if start_vec.y < end_vec.y else -1
         err = delta_x - delta_y
-        curr_x = start_x
-        curr_y = start_y
+        curr_x = start_vec.x
+        curr_y = start_vec.y
 
         while True:
             pixel = self._grid.get_pixel(curr_x, curr_y)
             if pixel:
-                char = self.get_char_from_line(start_x, start_y, end_x, end_y, curr_x, curr_y)
-                pixel.char = char
+                pixel.char = self.get_char_for_line(delta_x, delta_y, curr_x, curr_y, end_vec)
                 if color:
                     pixel.color = color
 
-            if curr_x == end_x and curr_y == end_y:
+            if curr_x == end_vec.x and curr_y == end_vec.y:
                 break
 
-            e2 = 2 * err
+            double_err = 2 * err
+            if double_err > -delta_y:
+                err -= delta_y
+                curr_x += step_x
+            if double_err < delta_x:
+                err += delta_x
+                curr_y += step_y
 
-            if e2 > -delta_y:
-                err = err - delta_y
-                curr_x = curr_x + sx
-
-            if e2 < delta_x:
-                err = err + delta_x
-                curr_y = curr_y + sy
-
-    def get_char_from_line(self,
-                           start_x: int,
-                           start_y: int,
-                           end_x: int,
-                           end_y: int,
-                           curr_x: int,
-                           curr_y: int) -> str:
-        if (start_x, start_y) == (curr_x, curr_y) or (end_x, end_y) == (curr_x, curr_y):
+    def get_char_for_line(self, delta_x: float, delta_y: float, curr_x: float, curr_y: float,
+                          end_vec: Vec2) -> str:
+        if curr_x == end_vec.x and curr_y == end_vec.y:
             return '+'
-
-        delta_x = end_x - start_x
-        delta_y = end_y - start_y
-
-        if abs(delta_x) < 2:
+        # Check if end_vec.x is equal to curr_x to avoid division by zero
+        if delta_x < 4 or end_vec.x == curr_x:
             return '|'
-        if abs(delta_y) < 2:
+        if delta_y < 4:
             return '_'
-
-        k = delta_y / delta_x
+        k = (end_vec.y - curr_y) / (end_vec.x - curr_x)
         return '/' if k < 0 else '\\'
+
+    def get_color_from_direction(self, direction: Direction) -> str:
+        if direction == Direction.NORTH:
+            return BRIGHT_RED
+        elif direction == Direction.SOUTH:
+            return BRIGHT_YELLOW
+        elif direction == Direction.EAST:
+            return BRIGHT_BLUE
+        elif direction == Direction.WEST:
+            return BRIGHT_MAGENTA
+        elif direction == Direction.UP:
+            return BRIGHT_CYAN
+        else:
+            return WHITE
 
     def draw(self) -> None:
         buffer = []
