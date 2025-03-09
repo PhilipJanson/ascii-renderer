@@ -167,8 +167,8 @@ class Shape:
 
     def rotate_x(self, theta: float) -> None:
         for vertex in self.vertices:
-            new_y = vertex.y * math.cos(-theta) - vertex.z * math.sin(-theta)
-            new_z = vertex.y * math.sin(-theta) + vertex.z * math.cos(-theta)
+            new_y = vertex.y * math.cos(theta) - vertex.z * math.sin(theta)
+            new_z = vertex.y * math.sin(theta) + vertex.z * math.cos(theta)
 
             vertex.y = new_y
             vertex.z = new_z

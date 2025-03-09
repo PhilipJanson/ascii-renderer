@@ -9,7 +9,8 @@ if __name__ == '__main__':
     os.system('cls||clear')
     sys.stdout.write("\033[?25l")
 
-    thread = App()
+    app = App()
+    app.register_key_bindings()
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    thread.start()
-    thread.join()
+    app.start()
+    app.join()
