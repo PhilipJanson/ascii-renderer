@@ -35,6 +35,7 @@ class Renderer:
                 self.draw_normal(face.normal().normalize().scale(12), color=color)
 
     def draw_face(self, face: Face, color: str=None) -> None:
+        self.rasterize_face(face)
         for edge in face.get_edges():
             startVec = edge[0].to_vec2(FOCAL_LENGTH)
             endVec = edge[1].to_vec2(FOCAL_LENGTH)
